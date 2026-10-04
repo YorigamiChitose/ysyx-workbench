@@ -49,6 +49,12 @@ static int cmd_c(char *args) {
 
 
 static int cmd_q(char *args) {
+  if (nemu_state.state == NEMU_ABORT) {
+    nemu_state.halt_ret = 1;
+  }
+  if (nemu_state.halt_ret == 0) {
+    nemu_state.state = NEMU_QUIT;
+  }
   return -1;
 }
 
