@@ -48,23 +48,10 @@ static char* rl_gets() {
   return line_read;
 }
 
-static int cmd_c(char *args) {
-  cpu_exec(-1);
-  return 0;
-}
-
-
-static int cmd_q(char *args) {
-  if (nemu_state.state == NEMU_ABORT) {
-    nemu_state.halt_ret = 1;
-  }
-  if (nemu_state.halt_ret == 0) {
-    nemu_state.state = NEMU_QUIT;
-  }
-  return -1;
-}
-
 static int cmd_help(char *args);
+static int cmd_c(char *args);
+static int cmd_q(char *args);
+
 
 static struct {
   const char *name;
@@ -78,6 +65,38 @@ static struct {
   /* TODO: Add more commands */
 
 };
+
+char *find_next_str(char *args) {
+  if (args == NULL) {
+    return NULL;
+  }
+  int i = 0;
+  while (args[++i] != '\0') {
+  }
+  for (int j = i; j < i + 64; j++) {
+    if (args[j] == '\0') {
+      return &args[++i];
+    }
+  }
+  return NULL;
+}
+
+char *get_arguments(char *args, int num) {
+  char *arg = args;
+  int num_temp = num;
+  int i = 0;
+  while (--num_temp + 1 && arg != NULL) {
+    if (num == num_temp + 1) {
+      arg = strtok(arg, " ");
+    } else {
+      i = 0;
+      while (arg[i++] != '\0') {
+      }
+      arg = strtok(arg + i, " ");
+    }
+  }
+  return arg;
+}
 
 #define NR_CMD ARRLEN(cmd_table)
 
@@ -102,6 +121,21 @@ static int cmd_help(char *args) {
     printf("Unknown command '%s'\n", arg);
   }
   return 0;
+}
+
+static int cmd_c(char *args) {
+  cpu_exec(-1);
+  return 0;
+}
+
+static int cmd_q(char *args) {
+  if (nemu_state.state == NEMU_ABORT) {
+    nemu_state.halt_ret = 1;
+  }
+  if (nemu_state.halt_ret == 0) {
+    nemu_state.state = NEMU_QUIT;
+  }
+  return -1;
 }
 
 void sdb_set_batch_mode() {
