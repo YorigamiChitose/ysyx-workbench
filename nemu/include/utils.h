@@ -18,6 +18,49 @@
 
 #include <common.h>
 
+// ----------- trace -----------
+#ifdef CONFIG_ITRACE
+struct ItraceNode {
+  paddr_t pc;
+  uint32_t inst;
+  struct ItraceNode *next;
+};
+#endif
+
+#ifdef CONFIG_MTRACE
+struct MtraceNode {
+  bool type;
+  uint8_t len;
+  word_t data;
+  vaddr_t addr;
+  struct MtraceNode *next;
+};
+#endif
+
+#ifdef CONFIG_FTRACE
+struct FuncInfo {
+  char name[CONFIG_FTRACE_NSIZE];
+  paddr_t addr;
+  size_t size;
+};
+
+struct FtraceNode {
+  struct FuncInfo* dstFunc;
+  struct FuncInfo* srcFunc;
+  paddr_t pcAddr;
+  uint8_t type;
+  uint16_t callDepth;
+  struct FtraceNode *next;
+};
+
+struct AllFunc {
+  size_t num;
+  struct FuncInfo funcInfo[CONFIG_FTRACE_ISIZE];
+};
+
+extern struct AllFunc allFucn;
+#endif
+
 // ----------- state -----------
 
 enum { NEMU_RUNNING, NEMU_STOP, NEMU_END, NEMU_ABORT, NEMU_QUIT };

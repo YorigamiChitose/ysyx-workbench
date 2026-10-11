@@ -18,11 +18,20 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "sdb.h"
+#include "../../../include/memory/paddr.h"
+
+#define LIST_NUM 3
+#define add_cnt(x) (x % LIST_NUM ? 1 : 0)
+#define addr_cnt(x) (x / LIST_NUM + add_cnt(x))
 
 static int is_batch_mode = false;
 
 void init_regex();
-void init_wp_pool();
+IFDEF(CONFIG_WATCH_POINT, void init_wp_pool());
+IFDEF(CONFIG_ITRACE, void display_iringbuf(void));
+IFDEF(CONFIG_MTRACE, void display_mringbuf(void));
+IFDEF(CONFIG_FTRACE, void display_call(void));
+IFDEF(CONFIG_DIFFTEST, void isa_difftest_attach(void));
 
 /* We use the `readline' library to provide more flexibility to read from stdin. */
 static char* rl_gets() {
@@ -51,74 +60,85 @@ static char* rl_gets() {
 static int cmd_help(char *args);
 static int cmd_c(char *args);
 static int cmd_q(char *args);
-
+static int cmd_p(char *args);
+static int cmd_w(char *args);
+static int cmd_d(char *args);
+static int cmd_x(char *args);
+static int cmd_info(char *args);
+static int cmd_trace(char *args);
+static int cmd_si(char *args);
+static int cmd_attach(char *args);
+static int cmd_detach(char *args);
 
 static struct {
   const char *name;
   const char *description;
   int (*handler) (char *);
 } cmd_table [] = {
-  { "help", "Display information about all supported commands", cmd_help },
-  { "c", "Continue the execution of the program", cmd_c },
-  { "q", "Exit NEMU", cmd_q },
-
-  /* TODO: Add more commands */
-
+  { "help",   "Usage: help\t[str]\t\t - Display information about all supported commands.", cmd_help},
+  { "c",      "Usage: c\t\t\t - Continue the execution of the program.", cmd_c},
+  { "q",      "Usage: q\t\t\t - Exit NEMU.", cmd_q},
+  { "p",      "Usage: p\t[str]\t\t - Calculate.", cmd_p},
+  { "w",      "Usage: w\t[str]\t\t - Set a new watchpoint.", cmd_w},
+  { "d",      "Usage: d\t[int]\t\t - Delete a watchpoint.", cmd_d},
+  { "x",      "Usage: x\t[int] [str]\t - Scan the memory.", cmd_x},
+  { "info",   "Usage: info\tr | w\t\t - Get the info.", cmd_info},
+  { "trace",  "Usage: trace\t[str]\t\t - Check the inst.", cmd_trace},
+  { "si",     "Usage: si\t[int]\t\t - Run step by step.", cmd_si},
+  { "attach", "Usage: attach\t\t\t - Enable difftest.", cmd_attach},
+  { "detach", "Usage: detach\t\t\t - Disable difftest.", cmd_detach},
 };
 
-char *find_next_str(char *args) {
-  if (args == NULL) {
-    return NULL;
-  }
-  int i = 0;
-  while (args[++i] != '\0') {
-  }
-  for (int j = i; j < i + 64; j++) {
-    if (args[j] == '\0') {
-      return &args[++i];
+#define SDB_MAX_ARGS 8
+
+/* Split the raw argument string in place into space-separated tokens.
+ * Returns the token count (capped at max); argv entries point into args.
+ */
+static int split_args(char *args, char **argv, int max) {
+  int argc = 0;
+  char *p = args;
+  while (argc < max) {
+    while (*p == ' ') p++;
+    if (*p == '\0') break;
+    argv[argc++] = p;
+    while (*p != '\0' && *p != ' ') p++;
+    if (*p == ' ') {
+      *p = '\0';
+      p++;
     }
   }
-  return NULL;
+  return argc;
 }
 
 char *get_arguments(char *args, int num) {
-  char *arg = args;
-  int num_temp = num;
-  int i = 0;
-  while (--num_temp + 1 && arg != NULL) {
-    if (num == num_temp + 1) {
-      arg = strtok(arg, " ");
-    } else {
-      i = 0;
-      while (arg[i++] != '\0') {
-      }
-      arg = strtok(arg + i, " ");
-    }
+  if (args == NULL || num < 1) {
+    return NULL;
   }
-  return arg;
+  char *argv[SDB_MAX_ARGS];
+  if (split_args(args, argv, SDB_MAX_ARGS) < num) {
+    return NULL;
+  }
+  return argv[num - 1];
 }
 
 #define NR_CMD ARRLEN(cmd_table)
 
 static int cmd_help(char *args) {
-  /* extract the first argument */
   char *arg = strtok(NULL, " ");
   int i;
-
   if (arg == NULL) {
-    /* no argument given */
     for (i = 0; i < NR_CMD; i ++) {
-      printf("%s - %s\n", cmd_table[i].name, cmd_table[i].description);
+      printf("%-6s- %s\n", cmd_table[i].name, cmd_table[i].description);
     }
   }
   else {
     for (i = 0; i < NR_CMD; i ++) {
       if (strcmp(arg, cmd_table[i].name) == 0) {
-        printf("%s - %s\n", cmd_table[i].name, cmd_table[i].description);
+        printf("%-6s- %s\n", cmd_table[i].name, cmd_table[i].description);
         return 0;
       }
     }
-    printf("Unknown command '%s'\n", arg);
+    printf("Error! Unknown command '%s'\n", arg);
   }
   return 0;
 }
@@ -136,6 +156,170 @@ static int cmd_q(char *args) {
     nemu_state.state = NEMU_QUIT;
   }
   return -1;
+}
+
+static int cmd_p(char *args) {
+  if (args == NULL) {
+    printf("Error, please retry!\n");
+    return 0;
+  }
+  char *arg = args;
+  bool flag = true;
+  word_t answer = expr(arg, &flag);
+  if (flag) {
+    printf("answer = " FMT_WORD "\n", answer);
+  } else {
+    printf("Error! please retry!\n");
+  }
+  return 0;
+}
+
+static int cmd_d(char *args) {
+#ifdef CONFIG_WATCH_POINT
+  if (args == NULL) {
+    printf("Error, please retry!\n");
+    return 0;
+  }
+  char *arg = args;
+  bool flag = true;
+  word_t answer = expr(arg, &flag);
+  if (flag) {
+    bool success;
+    free_wp(answer, &success);
+    if (success) {
+      printf("Delete watchpoint " FMT_WORD " success.\n", answer);
+    }
+    else {
+      printf("Error!\n");
+    }
+  } else {
+    printf("Error! please retry!\n");
+  }
+#else
+  printf("Watch point not enabled\n");
+#endif
+  return 0;
+}
+
+static int cmd_w(char *args) {
+#ifdef CONFIG_WATCH_POINT
+  if (args == NULL) {
+    printf("Error, please retry!\n");
+    return 0;
+  }
+  char *expr = args;
+  bool flag;
+  WP *temp = new_wp(expr, &flag);
+  if (flag) {
+    printf("New watch point set success\nexpression = %s\n", temp->expression);
+  }
+  else {
+    printf("Error! Watch point full\n");
+  }
+#else
+  printf("Watch point not enabled\n");
+#endif
+  return 0;
+}
+
+static int cmd_x(char *args) {
+  char *x_argv[2];
+  if (args == NULL || split_args(args, x_argv, 2) < 2) {
+    printf("Error, please retry!\n");
+    return 0;
+  }
+  char *memory_len_str = x_argv[0];
+  char *memory_addr_str = x_argv[1];
+  bool len_flag = true;
+  bool addr_flag = true;
+  word_t memory_len = expr(memory_len_str, &len_flag);
+  word_t memory_addr = expr(memory_addr_str, &addr_flag);
+  if (len_flag && addr_flag) {
+    for (int i = 0; i < LIST_NUM; i++) {
+      printf("|    addr    |    data    |");
+    }
+    printf("\n");
+    for (int i = 0; i < addr_cnt(memory_len); i++) {
+      for (int j = 0; i + j * addr_cnt(memory_len) < memory_len; j++) {
+        printf("| " FMT_WORD " : " FMT_WORD " |",
+               (memory_addr + (i + j * addr_cnt(memory_len)) * 4),
+               paddr_read(memory_addr + (i + j * addr_cnt(memory_len)) * 4, 4));
+      }
+      printf("\n");
+    }
+  } else {
+    printf("Error! please retry!\n");
+  }
+  return 0;
+}
+
+static int cmd_info(char *args) {
+  char *arg = get_arguments(args, 1);
+  if (arg == NULL) {
+    printf("Error, please retry!\n");
+    return 0;
+  }
+  if (strcmp(arg, "r") == 0) {
+    isa_reg_display();
+  } else if (strcmp(arg, "w") == 0) {
+  #ifdef CONFIG_WATCH_POINT
+    check_wp();
+  #else
+    printf("Watch point not enabled\n");
+  #endif
+  }
+  return 0;
+}
+
+static int cmd_trace(char *args) {
+  char *arg = get_arguments(args, 1);
+  if (arg == NULL) {
+    printf("Error, please retry!\n");
+    return 0;
+  }
+  if (strcmp(arg, "i") == 0) {
+    IFDEF(CONFIG_ITRACE, display_iringbuf());
+  } else if (strcmp(arg, "m") == 0) {
+    IFDEF(CONFIG_MTRACE, display_mringbuf());
+  } else if (strcmp(arg, "f") == 0) {
+    IFDEF(CONFIG_FTRACE, display_call());
+  } else if (strcmp(arg, "r") == 0) {
+    IFDEF(CONFIG_RTRACE, display_rringbuf());
+  }
+  else {
+    printf("Error, please retry!\n");
+  }
+  return 0;
+}
+
+static int cmd_si(char *args) {
+  if (args == NULL) {
+    cpu_exec(1);
+    return 0;
+  }
+  bool flag = true;
+  word_t steps = expr(args, &flag);
+  if (flag) {
+    cpu_exec(steps);
+  } else {
+    printf("Error, please retry!\n");
+  }
+  return 0;
+}
+
+extern bool enable_difftest;
+
+static int cmd_attach(char *args) {
+  IFDEF(CONFIG_DIFFTEST, isa_difftest_attach());
+  printf("Enable difftest success\n");
+  IFDEF(CONFIG_DIFFTEST, enable_difftest = true);
+  return 0;
+}
+
+static int cmd_detach(char *args) {
+  printf("Disable difftest success\n");
+  IFDEF(CONFIG_DIFFTEST, enable_difftest = false);
+  return 0;
 }
 
 void sdb_set_batch_mode() {
@@ -185,5 +369,5 @@ void init_sdb() {
   init_regex();
 
   /* Initialize the watchpoint pool. */
-  init_wp_pool();
+  IFDEF(CONFIG_WATCH_POINT, init_wp_pool());
 }
