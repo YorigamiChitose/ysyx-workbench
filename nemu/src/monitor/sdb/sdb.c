@@ -307,7 +307,7 @@ static int cmd_si(char *args) {
   return 0;
 }
 
-extern bool enable_difftest;
+IFDEF(CONFIG_DIFFTEST, extern bool enable_difftest);
 
 static int cmd_attach(char *args) {
   IFDEF(CONFIG_DIFFTEST, isa_difftest_attach());

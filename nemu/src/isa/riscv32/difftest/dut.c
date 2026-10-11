@@ -18,8 +18,8 @@
 #include "../local-include/reg.h"
 
 extern const char *regs[];
-extern bool enable_difftest;
-void reinit_difftest(void);
+IFDEF(CONFIG_DIFFTEST, extern bool enable_difftest);
+IFDEF(CONFIG_DIFFTEST, void reinit_difftest(void));
 
 bool isa_difftest_checkregs(CPU_state *ref_r, vaddr_t pc) {
   if (ref_r->pc != cpu.pc) {
@@ -56,6 +56,6 @@ bool isa_difftest_checkregs(CPU_state *ref_r, vaddr_t pc) {
 }
 
 void isa_difftest_attach() {
-  enable_difftest = true;
-  reinit_difftest();
+  IFDEF(CONFIG_DIFFTEST, enable_difftest = true);
+  IFDEF(CONFIG_DIFFTEST, reinit_difftest());
 }
