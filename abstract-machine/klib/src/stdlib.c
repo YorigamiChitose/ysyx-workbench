@@ -53,9 +53,18 @@ void *malloc(size_t size) {
   // Therefore do not call panic() here, else it will yield a dead recursion:
   //   panic() -> putchar() -> (glibc) -> malloc() -> panic()
 #if !(defined(__ISA_NATIVE__) && defined(__NATIVE_USE_KLIB__))
-  panic("Not implemented");
-#endif
+  static uintptr_t brk = 0;
+  if (brk == 0) brk = ROUNDUP((uintptr_t)heap.start, 8);
+  size = ROUNDUP(size, 8);
+  if (brk + size > (uintptr_t)heap.end) {
+    panic("malloc: heap exhausted");
+  }
+  void *ret = (void *)brk;
+  brk += size;
+  return ret;
+#else
   return NULL;
+#endif
 }
 
 void *calloc(size_t nmemb, size_t size) {
