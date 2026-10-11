@@ -35,6 +35,8 @@ static void restart() {
 
   /* Set the initial mstatus value */
   cpu.csr.mstatus = MUXDEF(CONFIG_RV64, 0xa00001800, 0x1800);
+
+  /* Set the initial mode value */
   cpu.mode = 0x03;
 }
 
