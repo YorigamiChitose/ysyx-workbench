@@ -60,7 +60,7 @@ ifneq ($(MAKECMDGOALS),archive)
 ifdef diskfilelist
 RAMDISK_SRC = $(WORK_DIR)/build/$(NAME).ramdisk.c
 $(RAMDISK_SRC): $(diskfilelist)
-	python $(AM_HOME)/tools/gen-ramdisk.py $@ $^
+	python3 $(AM_HOME)/tools/gen-ramdisk.py $@ $^
 
 SRCS += $(RAMDISK_SRC)
 endif
