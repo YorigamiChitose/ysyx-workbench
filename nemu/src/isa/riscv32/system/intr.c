@@ -16,11 +16,14 @@
 #include <isa.h>
 
 word_t isa_raise_intr(word_t NO, vaddr_t epc) {
-  /* TODO: Trigger an interrupt/exception with ``NO''.
-   * Then return the address of the interrupt/exception vector.
-   */
-
-  return 0;
+  cpu.csr.mepc = epc;
+  cpu.csr.mcause = NO;
+  cpu.csr.mstatus = (cpu.csr.mstatus & ~(1 << 7)) | ((cpu.csr.mstatus & (1 << 3)) << 4); // MIE -> MPIE
+  cpu.csr.mstatus &= ~(1 << 3); // 0 -> MIE
+  cpu.csr.mstatus &= ~((1 << 11) + (1 << 12)); // 00 -> MPP
+  cpu.csr.mstatus |= cpu.mode << 11; // mode -> MPP
+  cpu.mode = 0x03;
+  return cpu.csr.mtvec;
 }
 
 word_t isa_query_intr() {
