@@ -49,6 +49,23 @@ struct DtraceNode {
 };
 #endif
 
+#ifdef CONFIG_ETRACE
+struct EtraceNode {
+  uint64_t seq;
+  vaddr_t epc;
+  vaddr_t target;
+  word_t cause;
+  word_t status;
+  word_t info;
+  uint8_t from_mode;
+  uint8_t to_mode;
+  bool is_interrupt;
+  bool is_return;
+  bool valid;
+  struct EtraceNode *next;
+};
+#endif
+
 #ifdef CONFIG_FTRACE
 struct FuncInfo {
   char name[CONFIG_FTRACE_NSIZE];

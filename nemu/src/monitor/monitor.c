@@ -26,6 +26,7 @@ void init_disasm();
 IFDEF(CONFIG_ITRACE, void init_iringbuf(void));
 IFDEF(CONFIG_MTRACE, void init_mringbuf(void));
 IFDEF(CONFIG_DTRACE, void init_dringbuf(void));
+IFDEF(CONFIG_ETRACE, void init_etrace(void));
 IFDEF(CONFIG_FTRACE, void init_func_name(const char *elf_file));
 IFDEF(CONFIG_FTRACE, void init_ftrace_node(void));
 
@@ -144,6 +145,9 @@ void init_monitor(int argc, char *argv[]) {
 
   /* Initialize the mtrace ring buffer. */
   IFDEF(CONFIG_MTRACE, init_mringbuf());
+
+  /* Initialize the exception trace ring buffer. */
+  IFDEF(CONFIG_ETRACE, init_etrace());
 
   /* Initalize the function info */
   IFDEF(CONFIG_FTRACE, init_func_name(elf_file));

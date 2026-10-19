@@ -31,6 +31,7 @@ IFDEF(CONFIG_WATCH_POINT, void init_wp_pool());
 IFDEF(CONFIG_ITRACE, void display_iringbuf(void));
 IFDEF(CONFIG_MTRACE, void display_mringbuf(void));
 IFDEF(CONFIG_DTRACE, void display_dringbuf(void));
+IFDEF(CONFIG_ETRACE, void display_etrace(void));
 IFDEF(CONFIG_FTRACE, void display_call(void));
 IFDEF(CONFIG_DIFFTEST, void isa_difftest_attach(void));
 
@@ -84,7 +85,7 @@ static struct {
   { "d",      "Usage: d\t[int]\t\t - Delete a watchpoint.", cmd_d},
   { "x",      "Usage: x\t[int] [str]\t - Scan the memory.", cmd_x},
   { "info",   "Usage: info\tr | w\t\t - Get the info.", cmd_info},
-  { "trace",  "Usage: trace\t[i|m|d|f]\t - Display trace information.", cmd_trace},
+  { "trace",  "Usage: trace\t[i|m|d|e|f]\t - Display trace information.", cmd_trace},
   { "si",     "Usage: si\t[int]\t\t - Run step by step.", cmd_si},
   { "attach", "Usage: attach\t\t\t - Enable difftest.", cmd_attach},
   { "detach", "Usage: detach\t\t\t - Disable difftest.", cmd_detach},
@@ -284,6 +285,8 @@ static int cmd_trace(char *args) {
     IFDEF(CONFIG_MTRACE, display_mringbuf());
   } else if (strcmp(arg, "d") == 0) {
     IFDEF(CONFIG_DTRACE, display_dringbuf());
+  } else if (strcmp(arg, "e") == 0) {
+    IFDEF(CONFIG_ETRACE, display_etrace());
   } else if (strcmp(arg, "f") == 0) {
     IFDEF(CONFIG_FTRACE, display_call());
   } else if (strcmp(arg, "r") == 0) {
