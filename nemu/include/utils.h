@@ -60,6 +60,7 @@ struct EtraceNode {
   uint8_t from_mode;
   uint8_t to_mode;
   bool is_interrupt;
+  bool is_return;
   bool valid;
   struct EtraceNode *next;
 };

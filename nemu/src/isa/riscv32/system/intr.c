@@ -16,6 +16,7 @@
 #include <isa.h>
 
 IFDEF(CONFIG_ETRACE, void etrace_push(bool is_interrupt, word_t cause, vaddr_t epc, vaddr_t target, word_t status, uint8_t from_mode, uint8_t to_mode, word_t info));
+IFDEF(CONFIG_ETRACE, void etrace_push_return(vaddr_t pc, vaddr_t target, word_t status, uint8_t from_mode, uint8_t to_mode));
 
 word_t isa_raise_intr(word_t NO, vaddr_t epc) {
   IFDEF(CONFIG_ETRACE, word_t status_before = cpu.csr.mstatus);

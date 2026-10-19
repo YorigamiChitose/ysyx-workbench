@@ -22,6 +22,7 @@ IFDEF(CONFIG_ITRACE, void push_inst(paddr_t pc, uint32_t inst));
 IFDEF(CONFIG_FTRACE, void trace_func_call(paddr_t pcAddr, paddr_t dstAddr));
 IFDEF(CONFIG_FTRACE, void trace_func_ret(paddr_t pcAddr, paddr_t dstAddr));
 IFDEF(CONFIG_FTRACE, void trace_func_end(void));
+IFDEF(CONFIG_ETRACE, void etrace_push_return(vaddr_t pc, vaddr_t target, word_t status, uint8_t from_mode, uint8_t to_mode));
 
 #define R(i) gpr(i)
 #define Mr vaddr_read
@@ -55,10 +56,15 @@ enum {
                 case MACHINE_MODE_S: s->dnpc = isa_raise_intr(0x09, s->pc); break; \
                 case MACHINE_MODE_M: s->dnpc = isa_raise_intr(0x0B, s->pc); break; \
               }
-#define MRET cpu.csr.mstatus = (cpu.csr.mstatus & ~(1 << 3)) | ((cpu.csr.mstatus & (1 << 7)) >> 4); \
+#define MRET do { \
+          IFDEF(CONFIG_ETRACE, word_t etrace_status = cpu.csr.mstatus); \
+          IFDEF(CONFIG_ETRACE, uint8_t etrace_mode = cpu.mode); \
+          cpu.csr.mstatus = (cpu.csr.mstatus & ~(1 << 3)) | ((cpu.csr.mstatus & (1 << 7)) >> 4); \
           cpu.csr.mstatus |= (1 << 7); \
           cpu.mode = (cpu.csr.mstatus >> 11) & 0x03; \
-          cpu.csr.mstatus &= ~((1u << 11) | (1u << 12));
+          cpu.csr.mstatus &= ~((1u << 11) | (1u << 12)); \
+          IFDEF(CONFIG_ETRACE, etrace_push_return(s->pc, s->dnpc, etrace_status, etrace_mode, cpu.mode)); \
+        } while (0)
 #define XLEN_H MUXDEF(CONFIG_RV64, 32, 16)
 #define XLEN MUXDEF(CONFIG_RV64, 64, 32)
 #define src1R() do { *src1 = R(rs1); } while (0)

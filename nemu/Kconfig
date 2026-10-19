@@ -213,6 +213,11 @@ config ETRACE_BSIZE
   hex "Exception tracer buffer size"
   default 0x10
 
+config ETRACE_LOG
+  depends on ETRACE
+  bool "Write exception trace to log file"
+  default n
+
 config FTRACE
   depends on TRACE && TARGET_NATIVE_ELF && ENGINE_INTERPRETER
   bool "Enable function tracer"
