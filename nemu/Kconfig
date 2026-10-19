@@ -203,6 +203,16 @@ config DTRACE_BSIZE
   hex "Device tracer buffer size"
   default 0x10
 
+config ETRACE
+  depends on TRACE && TARGET_NATIVE_ELF && ENGINE_INTERPRETER
+  bool "Enable exception tracer"
+  default y
+
+config ETRACE_BSIZE
+  depends on ETRACE
+  hex "Exception tracer buffer size"
+  default 0x10
+
 config FTRACE
   depends on TRACE && TARGET_NATIVE_ELF && ENGINE_INTERPRETER
   bool "Enable function tracer"

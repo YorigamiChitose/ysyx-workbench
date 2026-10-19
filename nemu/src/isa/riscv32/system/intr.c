@@ -15,7 +15,11 @@
 
 #include <isa.h>
 
+IFDEF(CONFIG_ETRACE, void etrace_push(bool is_interrupt, word_t cause, vaddr_t epc, vaddr_t target, word_t status, uint8_t from_mode, uint8_t to_mode, word_t info));
+
 word_t isa_raise_intr(word_t NO, vaddr_t epc) {
+  IFDEF(CONFIG_ETRACE, word_t status_before = cpu.csr.mstatus);
+  IFDEF(CONFIG_ETRACE, uint8_t mode_before = cpu.mode);
   cpu.csr.mepc = epc;
   cpu.csr.mcause = NO;
   cpu.csr.mstatus = (cpu.csr.mstatus & ~(1 << 7)) | ((cpu.csr.mstatus & (1 << 3)) << 4); // MIE -> MPIE
@@ -23,6 +27,14 @@ word_t isa_raise_intr(word_t NO, vaddr_t epc) {
   cpu.csr.mstatus &= ~((1 << 11) + (1 << 12)); // 00 -> MPP
   cpu.csr.mstatus |= cpu.mode << 11; // mode -> MPP
   cpu.mode = 0x03;
+  IFDEF(CONFIG_ETRACE, {
+    bool is_interrupt = (NO >> MUXDEF(CONFIG_ISA64, 63, 31)) != 0;
+    word_t info = 0;
+    if (!is_interrupt && NO >= 0x08 && NO <= 0x0B) {
+      info = cpu.gpr[MUXDEF(CONFIG_RVE, 15, 17)];
+    }
+    etrace_push(is_interrupt, NO, epc, cpu.csr.mtvec, status_before, mode_before, cpu.mode, info);
+  });
   return cpu.csr.mtvec;
 }
 
