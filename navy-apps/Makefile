@@ -146,6 +146,15 @@ ifeq ($(wildcard $(NAVY_HOME)/libs/libc/Makefile),)
   $(shell cd $(NAVY_HOME)/libs && git clone git@github.com:NJU-ProjectN/newlib-navy.git libc)
 endif
 
+# NOTE: libs/libc is an untracked clone. With GCC 14+, add these lines to
+# libs/libc/Makefile after cloning:
+#   CFLAGS += -D_NO_GETPASS -D_LDBL_EQ_DBL -D_COMPILING_NEWLIB
+#   CFLAGS += -Wno-error=implicit-function-declaration
+# -D_NO_GETPASS skips obsolete BSD getpass code.
+# -D_LDBL_EQ_DBL avoids the undeclared strtold_l path in wcstold.c.
+# -D_COMPILING_NEWLIB exposes newlib's internal _open/_read/... prototypes.
+# The last flag tolerates remaining legacy implicit declarations.
+
 ### Build order control
 app: $(APP)
 archive: $(ARCHIVE)
@@ -177,8 +186,8 @@ $(CLEAN_ALL):
 .PHONY: clean-all $(CLEAN_ALL)
 
 ### Build fsimg and ramdisk for Nanos-lite
-APPS =
-TESTS = dummy hello
+APPS = pal bird nterm menu
+TESTS = dummy hello bmp-test cpp-test event-test exec-test file-test
 
 fsimg: $(addprefix apps/, $(APPS)) $(addprefix tests/, $(TESTS))
 	-for t in $^; do $(MAKE) -s -C $(NAVY_HOME)/$$t install; done
