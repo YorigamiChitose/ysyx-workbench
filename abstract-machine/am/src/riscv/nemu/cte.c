@@ -8,7 +8,14 @@ Context* __am_irq_handle(Context *c) {
   if (user_handler) {
     Event ev = {0};
     switch (c->mcause) {
-      default: ev.event = EVENT_ERROR; break;
+      case ET_ECALL_FROM_MMODE:
+        ev.event = c->GPR1 == (uintptr_t)-1 ? EVENT_YIELD : EVENT_SYSCALL;
+        c->mepc += 4;
+        break;
+      default:
+        printf("Unhandled trap: mcause = %lu\n", (unsigned long)c->mcause);
+        ev.event = EVENT_ERROR;
+        break;
     }
 
     c = user_handler(ev, c);
@@ -31,7 +38,12 @@ bool cte_init(Context*(*handler)(Event, Context*)) {
 }
 
 Context *kcontext(Area kstack, void (*entry)(void *), void *arg) {
-  return NULL;
+  Context *context = (Context *)kstack.end - 1;
+  memset(context, 0, sizeof(*context));
+  context->mstatus = MSTATUS_SXL | MSTATUS_UXL | 0x1800;
+  context->mepc = (uintptr_t)entry;
+  context->gpr[10] = (uintptr_t)arg;
+  return context;
 }
 
 void yield() {
