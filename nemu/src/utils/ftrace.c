@@ -116,7 +116,7 @@ void display_call(void) {
       FMT_PADDR ": %*s%s [" ANSI_FG_GREEN "%s" ANSI_FG_YELLOW "@" ANSI_NONE FMT_PADDR "] -> [" ANSI_FG_GREEN "%s" ANSI_FG_YELLOW "@" ANSI_NONE FMT_PADDR "]\n",
       ftraceTemp->pcAddr, 
       ftraceTemp->callDepth, "", 
-      ftraceTemp->type == T_CALL ? "call": ANSI_BG_WHITE "ret" ANSI_NONE " ", 
+      ftraceTemp->type == T_CALL ? "call": ANSI_FG_RED "ret" ANSI_NONE " ", 
       ftraceTemp->srcFunc->name, 
       ftraceTemp->srcFunc->addr,
       ftraceTemp->dstFunc->name, 
