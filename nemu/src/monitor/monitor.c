@@ -25,6 +25,7 @@ void init_sdb();
 void init_disasm();
 IFDEF(CONFIG_ITRACE, void init_iringbuf(void));
 IFDEF(CONFIG_MTRACE, void init_mringbuf(void));
+IFDEF(CONFIG_DTRACE, void init_dringbuf(void));
 IFDEF(CONFIG_FTRACE, void init_func_name(const char *elf_file));
 IFDEF(CONFIG_FTRACE, void init_ftrace_node(void));
 
@@ -119,6 +120,9 @@ void init_monitor(int argc, char *argv[]) {
 
   /* Initialize memory. */
   init_mem();
+
+  /* Initialize the device trace ring buffer before devices are initialized. */
+  IFDEF(CONFIG_DTRACE, init_dringbuf());
 
   /* Initialize devices. */
   IFDEF(CONFIG_DEVICE, init_device());

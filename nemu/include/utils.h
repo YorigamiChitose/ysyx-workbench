@@ -37,6 +37,18 @@ struct MtraceNode {
 };
 #endif
 
+#ifdef CONFIG_DTRACE
+struct DtraceNode {
+  const char *name;
+  paddr_t addr;
+  vaddr_t pc;
+  word_t data;
+  uint8_t len;
+  bool is_write;
+  struct DtraceNode *next;
+};
+#endif
+
 #ifdef CONFIG_FTRACE
 struct FuncInfo {
   char name[CONFIG_FTRACE_NSIZE];
