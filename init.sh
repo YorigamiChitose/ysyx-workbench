@@ -53,7 +53,7 @@ case $1 in
     init NJU-ProjectN/nanos-lite ics2021 nanos-lite true
     ;;
   navy-apps)
-    init NJU-ProjectN/navy-apps ics2024 navy-apps false NAVY_HOME
+    init NJU-ProjectN/navy-apps ics2024 navy-apps true NAVY_HOME
     ;;
   nvboard)
     init NJU-ProjectN/nvboard master nvboard false NVBOARD_HOME
